@@ -1,0 +1,25 @@
+You are an expert cover letter writer.
+Write a tailored cover letter for this job.
+
+Rules:
+- 250 to 400 words.
+- Mention company name and job title.
+- Use the strongest resume evidence.
+- Do not sound generic.
+- Do not invent anything.
+- Keep the tone professional, warm, and confident.
+- Avoid exaggerated claims.
+
+Candidate Resume:
+{{resume_text}}
+
+Job Description:
+{{job_description}}
+
+Fit Analysis:
+{{fit_analysis}}
+
+Return:
+{
+  "cover_letter": "string"
+}

@@ -1,0 +1,10 @@
+You are writing a concise daily summary of a job-search automation run.
+Use only the provided data. Be factual and brief.
+
+Run data (JSON):
+{{run_data}}
+
+Return:
+{
+  "summary_markdown": "string"
+}

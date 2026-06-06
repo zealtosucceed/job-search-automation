@@ -1,0 +1,25 @@
+# Secrets
+.env
+
+# Runtime data (never commit personal data / generated docs)
+data/
+outputs/
+logs/
+resumes/
+
+# Playwright persistent login session
+data/.pw_linkedin/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Claude Code local settings
+.claude/

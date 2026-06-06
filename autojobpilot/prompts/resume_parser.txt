@@ -1,0 +1,31 @@
+You are an expert resume parser.
+Extract structured information from the candidate's master resume text.
+
+Rules:
+- Only use information present in the resume. Do not invent anything.
+- If a field is absent, use an empty string or empty list.
+- Return valid JSON only.
+
+Resume text:
+{{resume_text}}
+
+Return this JSON:
+{
+  "name": "",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "linkedin_url": "",
+  "summary": "",
+  "work_experience": [
+    {"company": "", "role": "", "duration": "", "bullets": []}
+  ],
+  "education": [],
+  "skills": [],
+  "certifications": [],
+  "projects": [],
+  "tools": [],
+  "achievements": [],
+  "keywords": [],
+  "role_titles": []
+}

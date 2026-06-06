@@ -1,0 +1,60 @@
+# ──────────────────────────────────────────────────────────────────────────
+# AutoJobPilot — single master config (the only file you normally edit)
+# Secrets live in .env, never here.
+# ──────────────────────────────────────────────────────────────────────────
+
+profile:
+  name: "Your Name"
+  email: "you@example.com"
+
+# ── Job search preferences (PRD Feature 2) ──
+search:
+  job_categories:
+    - HR Operations
+    - HR Business Partner
+    - Talent Acquisition
+    - People Operations
+    - Employee Engagement
+    - Learning and Development
+  locations:
+    - Sydney
+    - Melbourne
+    - Remote
+    - Hybrid
+  experience_level: ["Entry level", "Associate", "1-3 years", "2-5 years"]
+  job_type: ["Full-time", "Remote", "Hybrid"]
+  excluded_keywords: ["senior manager", "10 years", "payroll head"]
+  minimum_score: 5            # shortlist threshold (0-10)
+  needs_review_band: [4.5, 5] # scores in [lo, hi) are flagged, not auto-generated
+
+# ── Sources (toggle without touching code) ──
+sources:
+  ethicaljobs:
+    enabled: true
+    base_url: "https://www.ethicaljobs.com.au"
+    rate_limit_seconds: 3     # polite delay between requests
+    max_jobs_per_run: 40
+  linkedin:
+    enabled: true
+    mode: browser             # Mode C — user-driven Playwright
+    headless: false           # show the window so you can log in
+    job_urls: []              # paste LinkedIn job / saved-search URLs here
+
+# ── Scheduling (AEST) ──
+schedule:
+  timezone: "Australia/Sydney"   # AEST/AEDT, DST-aware. Use Australia/Brisbane for fixed UTC+10.
+  runs: ["14:00", "22:00"]       # afternoon + night, local wall-clock time
+  retries: 3                     # session-level retries on failure
+  backoff_seconds: [30, 120, 480]  # exponential backoff between retries
+
+# ── LLM (adapter registry — change `provider` to swap, one line) ──
+llm:
+  provider: anthropic            # anthropic | (future: openai, ollama)
+  model: claude-opus-4-8         # see README for cheaper alternatives
+  max_tokens: 8000
+  thinking: true                 # adaptive thinking for scoring/generation
+
+# ── Output ──
+output:
+  formats: ["docx", "md"]        # no PDF
+  notify: local_markdown         # local_markdown | (future: email)

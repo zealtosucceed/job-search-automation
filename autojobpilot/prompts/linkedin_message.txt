@@ -1,0 +1,33 @@
+You are an expert professional networking writer.
+Write a LinkedIn outreach message of around 300 words.
+
+Context:
+Candidate Resume:
+{{resume_text}}
+
+Job:
+{{job_description}}
+
+Company:
+{{company}}
+
+Role:
+{{job_title}}
+
+Contact:
+{{contact_name}}
+{{contact_title}}
+
+Rules:
+- Around 300 words.
+- Mention the specific role and company.
+- Make it personalized.
+- Do not sound desperate.
+- Ask for consideration, referral, or guidance.
+- Do not invent any experience.
+- Keep it copy-paste ready.
+
+Return:
+{
+  "linkedin_message": "string"
+}

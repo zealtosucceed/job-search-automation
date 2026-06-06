@@ -1,0 +1,78 @@
+profile:
+  name: Your Name
+  email: you@example.com
+search:
+  job_categories:
+  - Strategy & Partnerships Manager
+  - Strategic Partnerships Manager
+  - Strategy Manager
+  - Corporate Strategy Manager
+  - Senior Strategy Analyst / Senior Analyst, Strategy
+  - Strategy Consultant
+  - Management Consultant
+  - Partnerships Manager
+  - Business Strategy Manager
+  - Strategy & Operations Manager
+  - Strategy Associate / Strategy & Operations Associate
+  - Engagement Manager
+  - Strategy Lead / Head of Strategy
+  - Commercial Strategy Manager
+  - Growth Strategy Manager
+  - Go-to-Market (GTM) Manager / Market Entry Lead
+  - Business Development Manager
+  - Corporate Development Manager
+  - Operating Model / Transformation Consultant
+  - Customer Success
+  locations:
+  - Sydney
+  - Melbourne
+  - Remote
+  - Hybrid
+  - Australia
+  experience_level:
+  - Entry level
+  - Associate
+  - 1-3 years
+  - 2-5 years
+  job_type:
+  - Full-time
+  - Remote
+  - Hybrid
+  excluded_keywords:
+  - senior manager
+  - 10 years
+  - payroll head
+  minimum_score: 5.0
+  needs_review_band:
+  - 4.5
+  - 5
+sources:
+  ethicaljobs:
+    enabled: true
+    base_url: https://www.ethicaljobs.com.au
+    rate_limit_seconds: 3
+    max_jobs_per_run: 12
+  linkedin:
+    enabled: true
+    rate_limit_seconds: 4
+    max_jobs_per_run: 10
+    login_timeout_seconds: 240
+schedule:
+  timezone: Australia/Sydney
+  runs:
+  - '22:00'
+  retries: 3
+  backoff_seconds:
+  - 30
+  - 120
+  - 480
+llm:
+  provider: groq
+  model: meta-llama/llama-4-scout-17b-16e-instruct
+  max_tokens: 8000
+  thinking: true
+output:
+  formats:
+  - docx
+  - md
+  notify: local_markdown

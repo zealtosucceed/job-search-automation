@@ -1,0 +1,35 @@
+You are an expert resume writer.
+Customize the candidate's resume for the target job.
+
+Rules:
+- Do not fabricate experience.
+- Do not add fake tools, companies, certifications, degrees, metrics, or responsibilities.
+- You may rewrite existing points to make them more relevant.
+- You may reorder skills and bullet points.
+- You may remove irrelevant sections.
+- Keep it ATS-friendly.
+- Make the resume suitable for the target role.
+- Use clear, professional language.
+
+Master Resume:
+{{resume_text}}
+
+Job Description:
+{{job_description}}
+
+Fit Analysis:
+{{fit_analysis}}
+
+Return the customized resume in this structure:
+{
+  "name": "",
+  "contact": "",
+  "professional_summary": "",
+  "skills": [],
+  "experience": [
+    {"company": "", "role": "", "duration": "", "bullets": []}
+  ],
+  "education": [],
+  "certifications": [],
+  "additional_sections": []
+}
