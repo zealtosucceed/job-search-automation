@@ -8,6 +8,7 @@ drift if the site changes — adjust _parse_detail / _find_job_links if so.
 
 from __future__ import annotations
 
+import html
 import json
 import time
 import urllib.parse
@@ -136,15 +137,15 @@ class EthicalJobsCollector(Collector):
         # De-dup, preserve order.
         return list(dict.fromkeys(links))
 
-    def _parse_detail(self, html: str, url: str) -> Job | None:
-        soup = BeautifulSoup(html, "html.parser")
+    def _parse_detail(self, page_html: str, url: str) -> Job | None:
+        soup = BeautifulSoup(page_html, "html.parser")
 
         # 1) Preferred: schema.org JobPosting JSON-LD.
         jp = self._jobposting_jsonld(soup)
         if jp:
             return Job(
                 source=self.name,
-                job_title=jp.get("title", "").strip(),
+                job_title=self._clean(jp.get("title", "")),
                 company=self._org_name(jp.get("hiringOrganization")),
                 location=self._location(jp.get("jobLocation")),
                 job_type=self._emp_type(jp.get("employmentType")),
@@ -156,8 +157,12 @@ class EthicalJobsCollector(Collector):
             )
 
         # 2) Fallback heuristics (used when JSON-LD is missing or malformed).
-        title = (soup.find("h1") or soup.find("title"))
-        title_text = title.get_text(strip=True) if title else ""
+        h1 = soup.find("h1")
+        h1_text = self._clean(h1.get_text(strip=True)) if h1 else ""
+        page_title = self._clean(soup.title.get_text(strip=True)) if soup.title else ""
+        title_text = h1_text or (page_title.split(" - Job in ")[0].split(" - ")[0]
+                                 if page_title else "")
+        company = self._company_from_logo(soup)
         if not title_text:
             return None
         # Pick the RICHEST content container, not the first match — some pages wrap
@@ -169,16 +174,39 @@ class EthicalJobsCollector(Collector):
         return Job(
             source=self.name,
             job_title=title_text,
-            company="",
-            location=self._meta_location(soup),
+            company=company,
+            location=self._meta_location(soup) or self._location_from_title(page_title),
             job_url=url,
-            description=desc[:8000],
+            description=html.unescape(desc[:8000]),
         )
+
+    @staticmethod
+    def _clean(s: str) -> str:
+        return html.unescape(s or "").strip()
+
+    @staticmethod
+    def _company_from_logo(soup: BeautifulSoup) -> str:
+        """The posting organisation's logo alt reads "<Org>'s logo" / "<Org> logo"."""
+        for img in soup.find_all("img"):
+            alt = (img.get("alt") or "").strip()
+            low = alt.lower()
+            if low.endswith("'s logo"):
+                return html.unescape(alt[:-7]).strip()
+            if low.endswith(" logo"):
+                return html.unescape(alt[:-5]).strip()
+        return ""
+
+    @staticmethod
+    def _location_from_title(page_title: str) -> str:
+        if " - Job in " not in page_title:
+            return ""
+        right = page_title.split(" - Job in ", 1)[1]      # "<Location> - <Agency>"
+        return right.split(" - ")[0].strip()
 
     @staticmethod
     def _meta_location(soup: BeautifulSoup) -> str:
         el = soup.select_one("[itemprop=jobLocation], .job-location, .location")
-        return el.get_text(strip=True)[:80] if el else ""
+        return html.unescape(el.get_text(strip=True))[:80] if el else ""
 
     # ── JSON-LD helpers ──
     @staticmethod
@@ -208,9 +236,8 @@ class EthicalJobsCollector(Collector):
 
     @staticmethod
     def _org_name(org) -> str:
-        if isinstance(org, dict):
-            return org.get("name", "") or ""
-        return str(org or "")
+        name = org.get("name", "") if isinstance(org, dict) else str(org or "")
+        return html.unescape(name).strip()
 
     @staticmethod
     def _location(loc) -> str:
@@ -219,9 +246,10 @@ class EthicalJobsCollector(Collector):
         if isinstance(loc, dict):
             addr = loc.get("address", {})
             if isinstance(addr, dict):
-                return ", ".join(
+                joined = ", ".join(
                     x for x in (addr.get("addressLocality"), addr.get("addressRegion")) if x
                 )
+                return html.unescape(joined).strip()
         return ""
 
     @staticmethod

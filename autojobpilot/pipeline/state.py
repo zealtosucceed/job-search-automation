@@ -36,7 +36,7 @@ def make_run_id(run_type: str, tz: str) -> tuple[str, str, Path]:
     label = {
         "afternoon": "afternoon_2pm",
         "night": "night_10pm",
-    }.get(run_type, "manual_" + now.strftime("%H%M"))
+    }.get(run_type, f"{run_type}_{now.strftime('%H%M')}")  # manual_HHMM, rescore_HHMM, …
     run_id = f"{date}_{label}"
     run_dir = OUTPUTS_DIR / date / label
     return run_id, label, run_dir

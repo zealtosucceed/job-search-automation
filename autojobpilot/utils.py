@@ -50,9 +50,10 @@ def extract_json(text: str) -> dict | list:
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
     candidate = fenced.group(1).strip() if fenced else text.strip()
 
-    # Fast path.
+    # Fast path. strict=False tolerates raw control chars (e.g. literal newlines
+    # inside a cover-letter string) that some models emit instead of escaping.
     try:
-        return json.loads(candidate)
+        return json.loads(candidate, strict=False)
     except json.JSONDecodeError:
         pass
 
@@ -63,7 +64,7 @@ def extract_json(text: str) -> dict | list:
         if start != -1 and end > start:
             snippet = candidate[start : end + 1]
             try:
-                return json.loads(snippet)
+                return json.loads(snippet, strict=False)
             except json.JSONDecodeError:
                 continue
     raise ValueError("no valid JSON found in LLM response")

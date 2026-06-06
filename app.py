@@ -18,7 +18,7 @@ import streamlit as st
 
 from autojobpilot import store
 from autojobpilot.config import RESUME_JSON_PATH, RESUMES_DIR, ensure_dirs, load_config, save_config
-from autojobpilot.pipeline import run_cycle
+from autojobpilot.pipeline import rescore_from_ledger, run_cycle
 from autojobpilot.services.llm.registry import get_llm
 from autojobpilot.services.resume_parser import ingest_resume, load_resume
 
@@ -46,14 +46,27 @@ with tab_run:
 
     if load_resume() is None:
         st.warning("Upload a master resume first (Resume tab).")
-    if st.button("Run now", type="primary", disabled=load_resume() is None):
-        with st.spinner("Running cycle (collect → score → generate → summarize)…"):
-            try:
-                stats = run_cycle(cfg, "manual")
-                st.success("Run complete.")
-                st.json(stats)
-            except Exception as e:
-                st.error(f"Run failed: {e}")
+    col_run, col_rescore = st.columns(2)
+    with col_run:
+        if st.button("Run now", type="primary", disabled=load_resume() is None):
+            with st.spinner("Running cycle (collect → score → generate → summarize)…"):
+                try:
+                    stats = run_cycle(cfg, "manual")
+                    st.success("Run complete.")
+                    st.json(stats)
+                except Exception as e:
+                    st.error(f"Run failed: {e}")
+    with col_rescore:
+        if st.button("Re-score unscored jobs", disabled=load_resume() is None,
+                     help="Re-score ledger jobs that were never successfully scored "
+                          "(e.g. after a rate-limit failure) — no re-scraping."):
+            with st.spinner("Re-scoring unscored jobs from the ledger…"):
+                try:
+                    stats = rescore_from_ledger(cfg)
+                    st.success("Re-score complete.")
+                    st.json(stats)
+                except Exception as e:
+                    st.error(f"Re-score failed: {e}")
 
 # ── Resume tab ──────────────────────────────────────────────────────────────
 with tab_resume:

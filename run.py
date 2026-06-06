@@ -13,17 +13,20 @@ import argparse
 import sys
 
 from autojobpilot.config import load_config
-from autojobpilot.pipeline import run_cycle
+from autojobpilot.pipeline import rescore_from_ledger, run_cycle
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="AutoJobPilot — run one job-search cycle")
     ap.add_argument("--type", default="manual", choices=["manual", "afternoon", "night"],
                     help="Run slot (affects the output folder / resume behavior)")
+    ap.add_argument("--rescore", action="store_true",
+                    help="Skip scraping; re-score ledger jobs that were never successfully "
+                         "scored (e.g. after a rate-limit failure), then generate docs.")
     args = ap.parse_args()
 
     cfg = load_config()
-    stats = run_cycle(cfg, args.type)
+    stats = rescore_from_ledger(cfg) if args.rescore else run_cycle(cfg, args.type)
     print("\nRun complete:")
     for k, v in stats.items():
         print(f"  {k}: {v}")

@@ -100,15 +100,18 @@ def dedupe(ctx: RunContext) -> None:
             continue
         seen_this_run.add(j.job_id)
         seen_this_run.add(j.dedup_signature())
-        if not store.is_known(j):
+        # Process the job unless it was already SUCCESSFULLY scored. Jobs that were
+        # merely seen but errored (e.g. rate-limited) have no analysis and are retried.
+        if not store.has_analysis(j.job_id):
             new_ids.append(j.job_id)
-            store.upsert_job(j, ctx.run_id)  # register so future runs dedupe it
+            store.upsert_job(j, ctx.run_id)  # record/refresh in the ledger
 
     ctx.new_jobs = [by_id[i] for i in new_ids]
     ctx.state.set_new_job_ids(new_ids)
     ctx.state.update_stats(new=len(new_ids))
     ctx.state.mark_phase("dedupe")
-    log.info("[dedupe] %d new jobs (of %d staged)", len(new_ids), len(ctx.jobs))
+    log.info("[dedupe] %d to process (of %d staged; rest already scored)",
+             len(new_ids), len(ctx.jobs))
 
 
 # ── 4. SCORE ────────────────────────────────────────────────────────────────
@@ -165,33 +168,48 @@ def generate(ctx: RunContext) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
         analysis = _load_analysis(ctx, job, out_dir)
 
-        try:
-            if not ctx.state.job_step_done(job.job_id, "cv"):
+        # Each document is generated independently — one failing must NOT drop the
+        # job from the shortlist/CSV (the job is still a valid shortlist).
+        if not ctx.state.job_step_done(job.job_id, "cv"):
+            try:
                 documents.generate_cv(job, ctx.resume_text, analysis, out_dir, ctx.llm)
                 ctx.state.mark_job_step(job.job_id, "cv")
-            cvs += 1
+            except Exception as e:
+                log.warning("[generate] CV failed for %s: %s", job.job_id, e)
+                ctx.errors.append(f"cv {job.job_id}: {e}")
 
-            if not ctx.state.job_step_done(job.job_id, "cover"):
+        if not ctx.state.job_step_done(job.job_id, "cover"):
+            try:
                 documents.generate_cover_letter(job, ctx.resume_text, analysis, out_dir, ctx.llm)
                 ctx.state.mark_job_step(job.job_id, "cover")
-            covers += 1
+            except Exception as e:
+                log.warning("[generate] cover letter failed for %s: %s", job.job_id, e)
+                ctx.errors.append(f"cover {job.job_id}: {e}")
 
-            if not ctx.state.job_step_done(job.job_id, "outreach"):
+        if not ctx.state.job_step_done(job.job_id, "outreach"):
+            try:
                 res = documents.generate_outreach(job, ctx.resume_text, out_dir, ctx.llm)
                 ctx.state.mark_job_step(job.job_id, "outreach", bool(res))
-            if ctx.state.get_job_record(job.job_id).get("outreach"):
-                msgs += 1
+            except Exception as e:
+                log.warning("[generate] outreach failed for %s: %s", job.job_id, e)
+                ctx.errors.append(f"outreach {job.job_id}: {e}")
 
-            ctx.shortlisted_rows.append({
-                "company": job.company, "role": job.job_title,
-                "score": analysis.overall_score, "location": job.location,
-                "source": job.source, "job_url": job.job_url,
-                "folder": job.folder_name(), "files": "CV, Cover" +
-                (", Msg" if ctx.state.get_job_record(job.job_id).get("outreach") else ""),
-            })
-        except Exception as e:
-            log.warning("[generate] job %s failed: %s", job.job_id, e)
-            ctx.errors.append(f"generate {job.job_id}: {e}")
+        rec = ctx.state.get_job_record(job.job_id)
+        made = []
+        if rec.get("cv"):
+            made.append("CV"); cvs += 1
+        if rec.get("cover"):
+            made.append("Cover"); covers += 1
+        if rec.get("outreach"):
+            made.append("Msg"); msgs += 1
+
+        # Always record the shortlist, regardless of which docs succeeded.
+        ctx.shortlisted_rows.append({
+            "company": job.company, "role": job.job_title,
+            "score": analysis.overall_score, "location": job.location,
+            "source": job.source, "job_url": job.job_url,
+            "folder": job.folder_name(), "files": ", ".join(made) or "(none)",
+        })
 
     ctx.state.update_stats(cvs=cvs, cover_letters=covers, messages=msgs)
     ctx.state.mark_phase("generate")

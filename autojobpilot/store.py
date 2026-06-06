@@ -100,6 +100,47 @@ def is_known(job: Job) -> bool:
     return row is not None
 
 
+def has_analysis(job_id: str) -> bool:
+    """True only if this job was SUCCESSFULLY scored (has an analysis row).
+
+    This is the real dedup key: a job that was merely seen but never scored
+    (e.g. scoring 429'd on a rate limit, leaving status='error') must NOT be
+    treated as a duplicate — it should be retried on the next run.
+    """
+    with _connect() as con:
+        row = con.execute(
+            "SELECT 1 FROM analysis WHERE job_id = ? LIMIT 1", (job_id,)
+        ).fetchone()
+    return row is not None
+
+
+def unscored_jobs() -> list[Job]:
+    """Reconstruct Job objects for every ledger row that has no analysis yet.
+
+    Descriptions are stored in the jobs table, so these can be re-scored in place
+    without re-scraping.
+    """
+    with _connect() as con:
+        rows = con.execute(
+            "SELECT j.* FROM jobs j LEFT JOIN analysis a ON a.job_id = j.job_id "
+            "WHERE a.job_id IS NULL ORDER BY j.created_at"
+        ).fetchall()
+    jobs: list[Job] = []
+    for r in rows:
+        job = Job(
+            source=r["source"] or "", job_title=r["job_title"] or "",
+            company=r["company"] or "", job_url=r["job_url"] or "",
+            location=r["location"] or "", job_type=r["job_type"] or "",
+            work_mode=r["work_mode"] or "", date_posted=r["date_posted"] or "",
+            application_deadline=r["application_deadline"], description=r["description"] or "",
+            recruiter_name=r["recruiter_name"], recruiter_profile_url=r["recruiter_profile_url"],
+            salary=r["salary"], status=r["status"] or "new",
+        )
+        job.job_id = r["job_id"]
+        jobs.append(job)
+    return jobs
+
+
 def _coerce(v):
     """Make any scraped value safe to bind to a TEXT column. schema.org JSON-LD
     sometimes yields lists/dicts (e.g. employmentType=['FULL_TIME'])."""
